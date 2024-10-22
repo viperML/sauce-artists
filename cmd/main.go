@@ -1,7 +1,16 @@
 package cmd
 
-import "fmt"
+import (
+    "fmt"
+    "net/http"
+)
 
 func Execute() {
-    fmt.Printf("Hello")
+
+    resp, err := http.Get("http://example.com/")
+    if err != nil {
+        fmt.Printf("%s", err)
+    } else {
+        fmt.Printf("%v", resp)
+    }
 }
