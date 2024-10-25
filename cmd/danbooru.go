@@ -2,23 +2,20 @@ package cmd
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
-type FavResp struct {
-	Name    string
-	PostIds []int64 `json:"post_ids"`
+type Response struct {
+	Artist string `json:"tag_string_artist"`
 }
 
-func Execute() {
-	config := GetConfig()
-
-	url, err := url.Parse("https://danbooru.donmai.us/favorite_groups/" + fmt.Sprint(config.favgroup) + ".json")
+func GetPost(config *Config, postId int64) Response {
+	url, err := url.Parse("https://danbooru.donmai.us/posts/" + strconv.Itoa(int(postId)) + ".json")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -45,15 +42,14 @@ func Execute() {
 		log.Fatalf("Content-Type was <%s>", ct)
 	}
 
-	bytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	var favresp FavResp
-	err = json.Unmarshal(bytes, &favresp)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("%+v", favresp)
+	bytes, err := io.ReadAll(resp.Body)
+    if err != nil {
+        log.Fatal(err)
+    }
+    log.Print(string(bytes))
+
+    var res Response
+    json.Unmarshal(bytes, &res)
+    return res
 }
