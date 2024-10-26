@@ -56,4 +56,6 @@ func Execute() {
 		log.Fatal(err)
 	}
 	log.Printf("%+v", favresp)
+
+    CollectAuthors(&config, favresp.PostIds)
 }

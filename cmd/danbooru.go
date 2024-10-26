@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"go.uber.org/ratelimit"
 )
 
 type Response struct {
@@ -35,21 +37,35 @@ func GetPost(config *Config, postId int64) Response {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Print(resp)
 
 	ct := strings.Split(resp.Header.Get("Content-Type"), ";")[0]
 	if ct != "application/json" {
 		log.Fatalf("Content-Type was <%s>", ct)
 	}
 
-
 	bytes, err := io.ReadAll(resp.Body)
-    if err != nil {
-        log.Fatal(err)
-    }
-    log.Print(string(bytes))
+	if err != nil {
+		log.Fatal(err)
+	}
 
-    var res Response
-    json.Unmarshal(bytes, &res)
-    return res
+	var res Response
+	err = json.Unmarshal(bytes, &res)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return res
+}
+
+func CollectAuthors(config *Config, posts []int64) {
+	rl := ratelimit.New(9) // nginx limit
+
+	for i, post := range posts {
+		rl.Take()
+		resp := GetPost(config, post)
+		log.Print(resp.Artist)
+
+		if i == 5 {
+			log.Fatal("finish")
+		}
+	}
 }
