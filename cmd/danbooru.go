@@ -2,11 +2,11 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 
 	"go.uber.org/ratelimit"
@@ -16,44 +16,57 @@ type Response struct {
 	Artist string `json:"tag_string_artist"`
 }
 
-func GetPost(config *Config, postId int64) Response {
-	url, err := url.Parse("https://danbooru.donmai.us/posts/" + strconv.Itoa(int(postId)) + ".json")
+func Get(config *Config, path string) ([]byte, error) {
+	url, err := url.Parse("https://danbooru.donmai.us" + path)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("failed to parse url: %w", err)
 	}
-	values := url.Query()
-	values.Add("login", config.username)
-	values.Add("api_key", config.api_key)
-	url.RawQuery = values.Encode()
-	log.Print(url.String())
+
+	query := url.Query()
+	query.Add("login", config.username)
+	query.Add("api_key", config.api_key)
+	url.RawQuery = query.Encode()
 
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", url.String(), nil)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Add("User-Agent", "curl/8.9.1")
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("request failed: %w", err)
 	}
 
 	ct := strings.Split(resp.Header.Get("Content-Type"), ";")[0]
 	if ct != "application/json" {
-		log.Fatalf("Content-Type was <%s>", ct)
+		return nil, fmt.Errorf("request failed")
 	}
 
 	bytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
-	var res Response
-	err = json.Unmarshal(bytes, &res)
+	return bytes, nil
+}
+
+func GetPost(config *Config, postId int64) (*Response, error) {
+	path := fmt.Sprintf("/posts/%d.json", postId)
+    log.Print(path)
+	bytes, err := Get(config, path)
+
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("failed to query post %d: %w", postId, err)
 	}
-	return res
+
+	var resp Response
+	err = json.Unmarshal(bytes, &resp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse response for %d: %w", postId, err)
+	}
+
+	return &resp, nil
 }
 
 func CollectAuthors(config *Config, posts []int64) {
@@ -61,7 +74,10 @@ func CollectAuthors(config *Config, posts []int64) {
 
 	for i, post := range posts {
 		rl.Take()
-		resp := GetPost(config, post)
+		resp, err := GetPost(config, post)
+        if err != nil {
+            log.Fatal(err)
+        }
 		log.Print(resp.Artist)
 
 		if i == 5 {
