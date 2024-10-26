@@ -53,7 +53,6 @@ func Get(config *Config, path string) ([]byte, error) {
 
 func GetPost(config *Config, postId int64) (*Response, error) {
 	path := fmt.Sprintf("/posts/%d.json", postId)
-    log.Print(path)
 	bytes, err := Get(config, path)
 
 	if err != nil {
@@ -72,16 +71,33 @@ func GetPost(config *Config, postId int64) (*Response, error) {
 func CollectAuthors(config *Config, posts []int64) {
 	rl := ratelimit.New(9) // nginx limit
 
+	results := map[string]([]int64){}
+
 	for i, post := range posts {
 		rl.Take()
 		resp, err := GetPost(config, post)
-        if err != nil {
-            log.Fatal(err)
-        }
-		log.Print(resp.Artist)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-		if i == 5 {
-			log.Fatal("finish")
+		log.Printf("%d -> %s", post, resp.Artist)
+
+		entry, ok := results[resp.Artist]
+		if !ok {
+			entry = []int64{}
+		}
+		entry = append(entry, post)
+		results[resp.Artist] = entry
+
+		if i == 10 {
+			break
 		}
 	}
+
+	m, err := json.Marshal(&results)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Print(string(m))
 }
