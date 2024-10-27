@@ -73,7 +73,7 @@ func CollectAuthors(config *Config, posts []int64) {
 
 	results := map[string]([]int64){}
 
-	for i, post := range posts {
+	for _, post := range posts {
 		rl.Take()
 		resp, err := GetPost(config, post)
 		if err != nil {
@@ -88,10 +88,6 @@ func CollectAuthors(config *Config, posts []int64) {
 		}
 		entry = append(entry, post)
 		results[resp.Artist] = entry
-
-		if i == 10 {
-			break
-		}
 	}
 
 	m, err := json.Marshal(&results)
@@ -99,5 +95,5 @@ func CollectAuthors(config *Config, posts []int64) {
 		log.Fatal(err)
 	}
 
-	log.Print(string(m))
+    fmt.Print(string(m))
 }
