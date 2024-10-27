@@ -1,9 +1,10 @@
 package main
 
 import (
-    "sauce-artists/cmd"
+    "sauce-artists/bot"
 )
 
 func main() {
-    cmd.Execute()
+    // cmd.Execute()
+    bot.Execute()
 }
